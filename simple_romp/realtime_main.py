@@ -3,13 +3,16 @@ from romp.utils import WebcamVideoStream
 import cv2
 import numpy as np
 import socket
+import time
 
 # socket config
 HOST = '127.0.0.1'
 PORT = 8000
 server_addr = (HOST, PORT)
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(server_addr)
 
 def handle_joint_points(joint_points):
     smpl_joints_line = ",".join([str(v) for v in joint_points[:54].flatten()])
@@ -20,14 +23,8 @@ def send_joint_points(joint_points):
     global s
     outdata = handle_joint_points(joint_points)
     print('sendto ' + str(server_addr) + ': ' + outdata)
-    s.sendto(outdata.encode(), server_addr)
-
-    try:
-        indata, addr = s.recvfrom(1024)
-        print('recvfrom ' + str(addr) + ': ' + indata.decode())
-    except Exception as e:
-        print("timeout")
-
+    #s.sendto(outdata.encode(), server_addr)
+    s.send(outdata.encode())
 
 def main():
     settings = bev.main.default_settings
@@ -52,6 +49,7 @@ def main():
 
             if cv2.waitKey(1) == ord('q'):
                 break 
+
     except KeyboardInterrupt:
         print('shutdown!')
     finally:
