@@ -22,8 +22,11 @@ def send_joint_points(joint_points):
     print('sendto ' + str(server_addr) + ': ' + outdata)
     s.sendto(outdata.encode(), server_addr)
 
-    indata, addr = s.recvfrom(1024)
-    print('recvfrom ' + str(addr) + ': ' + indata.decode())
+    try:
+        indata, addr = s.recvfrom(1024)
+        print('recvfrom ' + str(addr) + ': ' + indata.decode())
+    except Exception as e:
+        print("timeout")
 
 
 def main():
