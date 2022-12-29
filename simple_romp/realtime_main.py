@@ -39,6 +39,7 @@ def main():
     try:
         while True:
             frame = cap.read()
+            cv2.imshow('Realtime', frame)
             outputs = bev_model(frame)
             if outputs != None:
                 #print(outputs['joints'])
