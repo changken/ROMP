@@ -5,7 +5,8 @@ HOST = '127.0.0.1'
 PORT = 8000
 server_addr = (HOST, PORT)
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(server_addr)
 
 print('server start at: %s:%s' % (HOST, PORT))
@@ -20,8 +21,8 @@ def main():
         print('recvfrom ' + str(addr) + ': ' + indata.decode())
 
         #outdata = 'echo ' + indata.decode()
-        outdata = 'recevied data!'
-        s.sendto(outdata.encode(), addr)
+        #outdata = 'recevied data!'
+        #s.sendto(outdata.encode(), addr)
 
 if __name__ == "__main__":
     main()

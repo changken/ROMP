@@ -1,4 +1,4 @@
-import bev
+from bev.main import BEV, default_settings
 from romp.utils import WebcamVideoStream
 import cv2
 import numpy as np
@@ -22,16 +22,17 @@ def handle_joint_points(joint_points):
 def send_joint_points(joint_points):
     global s
     outdata = handle_joint_points(joint_points)
-    print('sendto ' + str(server_addr) + ': ' + outdata)
+    #print('sendto ' + str(server_addr) + ': ' + outdata)
+    print('sendto ' + str(server_addr))
     #s.sendto(outdata.encode(), server_addr)
     s.send(outdata.encode())
 
 def main():
-    settings = bev.main.default_settings
+    settings = default_settings
     settings.mode = 'image'
     # settings is just a argparse Namespace. To change it, for instance, you can change mode via
     # settings.mode='video'
-    bev_model = bev.BEV(settings)
+    bev_model = BEV(settings)
     # outputs = bev_model(cv2.imread('path/to/image.jpg')) # please note that we take the input image in BGR format (cv2.imread).
 
     cap = WebcamVideoStream(0)
