@@ -15,3 +15,7 @@ dist/
 __pycache__/
 demo/images/
 log/*
+
+*.blend
+*.blend1
+romp_server.py
