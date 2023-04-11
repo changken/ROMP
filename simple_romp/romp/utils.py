@@ -2,7 +2,9 @@ from __future__ import print_function
 import torch
 from torch.nn import functional as F
 import numpy as np
-import cv2, os, sys
+import cv2
+import os
+import sys
 import os.path as osp
 from time import time
 #from scipy.spatial.transform import Rotation as R
@@ -10,8 +12,9 @@ from threading import Thread
 import re
 
 #-----------------------------------------------------------------------------------------#
-#                                  IO utilizes                                  
+#                                  IO utilizes
 #-----------------------------------------------------------------------------------------#
+
 
 def padding_image(image):
     h, w = image.shape[:2]
@@ -22,14 +25,17 @@ def padding_image(image):
     pad_image[top:bottom, left:right] = image
     image_pad_info = torch.Tensor([top, bottom, left, right, h, w])
     return pad_image, image_pad_info
-    
+
+
 def img_preprocess(image, input_size=512):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     pad_image, image_pad_info = padding_image(image)
-    input_image = torch.from_numpy(cv2.resize(pad_image, (input_size,input_size), interpolation=cv2.INTER_CUBIC))[None].float()
+    input_image = torch.from_numpy(cv2.resize(
+        pad_image, (input_size, input_size), interpolation=cv2.INTER_CUBIC))[None].float()
     return input_image, image_pad_info
 
-def convert_tensor2numpy(outputs, del_keys=['verts_camed','smpl_face', 'pj2d', 'verts_camed_org']):
+
+def convert_tensor2numpy(outputs, del_keys=['verts_camed', 'smpl_face', 'pj2d', 'verts_camed_org']):
     for key in del_keys:
         if key in outputs:
             del outputs[key]
@@ -39,6 +45,7 @@ def convert_tensor2numpy(outputs, del_keys=['verts_camed','smpl_face', 'pj2d', '
         if isinstance(outputs[key], torch.Tensor):
             outputs[key] = outputs[key].cpu().numpy()
     return outputs
+
 
 class ResultSaver:
     def __init__(self, mode='image', save_path=None, save_npz=True):
@@ -51,16 +58,18 @@ class ResultSaver:
             os.makedirs(self.save_dir, exist_ok=True)
         if self.mode == 'video':
             self.frame_save_paths = []
-    
+
     def __call__(self, outputs, input_path, prefix=None, img_ext='.png'):
         if self.mode == 'video' or self.is_dir:
             save_name = osp.basename(input_path)
-            save_path = osp.join(self.save_dir, osp.splitext(save_name)[0])+img_ext
+            save_path = osp.join(
+                self.save_dir, osp.splitext(save_name)[0])+img_ext
         elif self.mode == 'image':
             save_path = self.save_path
 
         if prefix is not None:
-            save_path = osp.splitext(save_path)[0]+f'_{prefix}'+osp.splitext(save_path)[1]
+            save_path = osp.splitext(save_path)[
+                0]+f'_{prefix}'+osp.splitext(save_path)[1]
 
         rendered_image = None
         if outputs is not None:
@@ -70,16 +79,17 @@ class ResultSaver:
                 np.savez(osp.splitext(save_path)[0]+'.npz', results=outputs)
         if rendered_image is None:
             rendered_image = cv2.imread(input_path)
-        
-        cv2.imwrite(save_path, rendered_image)    
+
+        cv2.imwrite(save_path, rendered_image)
         if self.mode == 'video':
             self.frame_save_paths.append(save_path)
-    
+
     def save_video(self, save_path, frame_rate=24):
-        if len(self.frame_save_paths)== 0:
-            return 
+        if len(self.frame_save_paths) == 0:
+            return
         height, width = cv2.imread(self.frame_save_paths[0]).shape[:2]
-        writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, (width, height))
+        writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(
+            *'mp4v'), frame_rate, (width, height))
         for frame_path in self.frame_save_paths:
             writer.write(cv2.imread(frame_path))
         writer.release()
@@ -93,20 +103,23 @@ def save_video_results(frame_save_paths):
         frame_results = np.load(npz_path, allow_pickle=True)['results'][()]
         base_name = osp.basename(save_path)
         video_results[base_name] = frame_results
-        
+
         if 'track_ids' not in frame_results:
             continue
         for subj_ind, track_id in enumerate(frame_results['track_ids']):
             if track_id not in video_sequence_results:
-                video_sequence_results[track_id] = {'frame_id':[]}
+                video_sequence_results[track_id] = {'frame_id': []}
             video_sequence_results[track_id]['frame_id'].append(frame_id)
             for key in frame_results:
                 if key not in video_sequence_results[track_id]:
                     video_sequence_results[track_id][key] = []
-                video_sequence_results[track_id][key].append(frame_results[key][subj_ind])
+                video_sequence_results[track_id][key].append(
+                    frame_results[key][subj_ind])
 
-    video_results_save_path = osp.join(osp.dirname(frame_save_paths[0]), 'video_results.npz')
-    np.savez(video_results_save_path, results=video_results, sequence_results=video_sequence_results)
+    video_results_save_path = osp.join(osp.dirname(
+        frame_save_paths[0]), 'video_results.npz')
+    np.savez(video_results_save_path, results=video_results,
+             sequence_results=video_sequence_results)
 
 
 class WebcamVideoStream(object):
@@ -116,17 +129,19 @@ class WebcamVideoStream(object):
         try:
             self.stream = cv2.VideoCapture(src)
         except:
-            self.stream = cv2.VideoCapture("/dev/video{}".format(src), cv2.CAP_V4L2)
-        
+            self.stream = cv2.VideoCapture(
+                "/dev/video{}".format(src), cv2.CAP_V4L2)
+
         (self.grabbed, self.frame) = self.stream.read()
         # initialize the variable used to indicate if the thread should
         # be stopped
         self.stopped = False
-    
+
     def start(self):
         # start the thread to read frames from the video stream
         Thread(target=self.update, args=()).start()
         return self
+
     def update(self):
         # keep looping infinitely until the thread is stopped
         while True:
@@ -135,20 +150,25 @@ class WebcamVideoStream(object):
                 return
             # otherwise, read the next frame from the stream
             (self.grabbed, self.frame) = self.stream.read()
+
     def read(self):
         # return the frame most recently read
         return self.frame
+
     def stop(self):
         # indicate that the thread should be stopped
         self.stopped = True
+
 
 def video2frame(video_path, frame_save_dir=None):
     cap = cv2.VideoCapture(video_path)
     for frame_id in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
         success_flag, frame = cap.read()
         if success_flag:
-            save_path = os.path.join(frame_save_dir, '{:08d}.jpg'.format(frame_id))
+            save_path = os.path.join(
+                frame_save_dir, '{:08d}.jpg'.format(frame_id))
             cv2.imwrite(save_path, frame)
+
 
 def collect_frame_path(video_path, save_path):
     assert osp.exists(video_path), video_path + 'not exist!'
@@ -164,9 +184,10 @@ def collect_frame_path(video_path, save_path):
 
     if osp.isfile(video_path):
         video_name, video_ext = osp.splitext(osp.basename(video_path))
-        
+
         frame_save_dir = osp.join(save_dir, video_name+'_frames')
-        print(f'Extracting the frames of input {video_path} to {frame_save_dir}')
+        print(
+            f'Extracting the frames of input {video_path} to {frame_save_dir}')
         os.makedirs(frame_save_dir, exist_ok=True)
         try:
             video2frame(video_path, frame_save_dir)
@@ -177,96 +198,121 @@ def collect_frame_path(video_path, save_path):
     else:
         frame_save_dir = video_path
 
-    assert osp.isdir(frame_save_dir), frame_save_dir + 'is supposed to be a folder containing video frames.'
-    frame_paths = [osp.join(frame_save_dir, frame_name) for frame_name in sorted(os.listdir(frame_save_dir))]
+    assert osp.isdir(frame_save_dir), frame_save_dir + \
+        'is supposed to be a folder containing video frames.'
+    frame_paths = [osp.join(frame_save_dir, frame_name)
+                   for frame_name in sorted(os.listdir(frame_save_dir))]
     return frame_paths, video_save_path
 
 #-----------------------------------------------------------------------------------------#
-#                         tracking & temporal optimization utils                                    
+#                         tracking & temporal optimization utils
 #-----------------------------------------------------------------------------------------#
 
+
 def smooth_global_rot_matrix(pred_rots, OE_filter):
+    # 先轉換成旋轉矩陣 再做平滑 最後轉回旋轉向量
     rot_mat = batch_rodrigues(pred_rots[None]).squeeze(0)
     smoothed_rot_mat = OE_filter.process(rot_mat)
-    smoothed_rot = rotation_matrix_to_angle_axis(smoothed_rot_mat.reshape(1,3,3)).reshape(-1)
+    smoothed_rot = rotation_matrix_to_angle_axis(
+        smoothed_rot_mat.reshape(1, 3, 3)).reshape(-1)
     return smoothed_rot
 
     device = pred_rots.device
-    #print('before',pred_rots)
-    rot_euler = transform_rot_representation(pred_rots.cpu().numpy(), input_type='vec',out_type='mat')
+    # print('before',pred_rots)
+    rot_euler = transform_rot_representation(
+        pred_rots.cpu().numpy(), input_type='vec', out_type='mat')
     smoothed_rot = OE_filter.process(rot_euler)
-    smoothed_rot = transform_rot_representation(smoothed_rot, input_type='mat',out_type='vec')
+    smoothed_rot = transform_rot_representation(
+        smoothed_rot, input_type='mat', out_type='vec')
     smoothed_rot = torch.from_numpy(smoothed_rot).float().to(device)
-    #print('after',smoothed_rot)
+    # print('after',smoothed_rot)
     return smoothed_rot
 
-class LowPassFilter:
-  def __init__(self):
-    self.prev_raw_value = None
-    self.prev_filtered_value = None
 
-  def process(self, value, alpha):
-    if self.prev_raw_value is None:
-        s = value
-    else:
-        s = alpha * value + (1.0 - alpha) * self.prev_filtered_value
-    self.prev_raw_value = value
-    self.prev_filtered_value = s
-    return s
+class LowPassFilter:
+    def __init__(self):
+        self.prev_raw_value = None
+        self.prev_filtered_value = None
+
+    def process(self, value, alpha):
+        if self.prev_raw_value is None:
+            s = value
+        else:
+            s = alpha * value + (1.0 - alpha) * self.prev_filtered_value
+        self.prev_raw_value = value
+        self.prev_filtered_value = s
+        return s
+
 
 class OneEuroFilter:
-  def __init__(self, mincutoff=1.0, beta=0.0, dcutoff=1.0, freq=30):
-    # min_cutoff: Decreasing the minimum cutoff frequency decreases slow speed jitter
-    # beta: Increasing the speed coefficient(beta) decreases speed lag.
-    self.freq = freq
-    self.mincutoff = mincutoff
-    self.beta = beta
-    self.dcutoff = dcutoff
-    self.x_filter = LowPassFilter()
-    self.dx_filter = LowPassFilter()
+    def __init__(self, mincutoff=1.0, beta=0.0, dcutoff=1.0, freq=30):
+        # min_cutoff: Decreasing the minimum cutoff frequency decreases slow speed jitter
+        # beta: Increasing the speed coefficient(beta) decreases speed lag.
+        self.freq = freq
+        self.mincutoff = mincutoff
+        self.beta = beta
+        self.dcutoff = dcutoff
+        self.x_filter = LowPassFilter()
+        self.dx_filter = LowPassFilter()
 
-  def compute_alpha(self, cutoff):
-    te = 1.0 / self.freq
-    tau = 1.0 / (2 * np.pi * cutoff)
-    return 1.0 / (1.0 + tau / te)
+    def compute_alpha(self, cutoff):
+        te = 1.0 / self.freq
+        tau = 1.0 / (2 * np.pi * cutoff)
+        return 1.0 / (1.0 + tau / te)
 
-  def process(self, x, print_inter=False):
-    prev_x = self.x_filter.prev_raw_value
-    dx = 0.0 if prev_x is None else (x - prev_x) * self.freq
-    edx = self.dx_filter.process(dx, self.compute_alpha(self.dcutoff))
-    
-    if isinstance(edx, float):
-        cutoff = self.mincutoff + self.beta * np.abs(edx)
-    elif isinstance(edx, np.ndarray):
-        cutoff = self.mincutoff + self.beta * np.abs(edx)
-    elif isinstance(edx, torch.Tensor):
-        cutoff = self.mincutoff + self.beta * torch.abs(edx)
-    if print_inter:
-        print(self.compute_alpha(cutoff))
-    return self.x_filter.process(x, self.compute_alpha(cutoff))
+    def process(self, x, print_inter=False):
+        prev_x = self.x_filter.prev_raw_value
+        dx = 0.0 if prev_x is None else (x - prev_x) * self.freq
+        edx = self.dx_filter.process(dx, self.compute_alpha(self.dcutoff))
+
+        if isinstance(edx, float):
+            cutoff = self.mincutoff + self.beta * np.abs(edx)
+        elif isinstance(edx, np.ndarray):
+            cutoff = self.mincutoff + self.beta * np.abs(edx)
+        elif isinstance(edx, torch.Tensor):
+            cutoff = self.mincutoff + self.beta * torch.abs(edx)
+        if print_inter:
+            print(self.compute_alpha(cutoff))
+        return self.x_filter.process(x, self.compute_alpha(cutoff))
+
 
 def check_filter_state(OE_filters, signal_ID, show_largest=False, smooth_coeff=3.):
-    if len(OE_filters)>100:
+    # 如果one euro filter的数量太多，全部刪除
+    if len(OE_filters) > 100:
         del OE_filters
+    # 如果signal id 不在 one euro filter裡面，則新增
     if signal_ID not in OE_filters:
+        # 如果是要顯示最大的，則使用預設的smooth_coeff
         if show_largest:
             OE_filters[signal_ID] = create_OneEuroFilter(smooth_coeff)
         else:
+            # 反之則預設為空dict
             OE_filters[signal_ID] = {}
-    if len(OE_filters[signal_ID])>1000:
+    # 如果該signal id的one euro filter的數量太多，則刪除
+    if len(OE_filters[signal_ID]) > 1000:
         del OE_filters[signal_ID]
+
 
 def create_OneEuroFilter(smooth_coeff):
     return {'smpl_thetas': OneEuroFilter(smooth_coeff, 0.7), 'cam': OneEuroFilter(1.6, 0.7), 'smpl_betas': OneEuroFilter(0.6, 0.7), 'global_rot': OneEuroFilter(smooth_coeff, 0.7)}
 
 
 def smooth_results(filters, body_pose=None, body_shape=None, cam=None):
+    # 如果body pose不為None
     if body_pose is not None:
-        global_rot = smooth_global_rot_matrix(body_pose[:3], filters['global_rot'])
-        body_pose = torch.cat([global_rot, filters['smpl_thetas'].process(body_pose[3:])], 0)
+        # 將body pose的後面的維度做global rotation的one euro filter
+        global_rot = smooth_global_rot_matrix(
+            body_pose[:3], filters['global_rot'])
+        # body pose 為 global rotation + one euro filter後的前3維body pose
+        body_pose = torch.cat(
+            [global_rot, filters['smpl_thetas'].process(body_pose[3:])], 0)
+    # 如果body shape不為None
     if body_shape is not None:
+        # 對body shape做one euro filter
         body_shape = filters['smpl_betas'].process(body_shape)
+    # 如果cam不為None
     if cam is not None:
+        # 對cam做one euro filter
         cam = filters['cam'].process(cam)
     return body_pose, body_shape, cam
 
@@ -274,77 +320,97 @@ def smooth_results(filters, body_pose=None, body_shape=None, cam=None):
 def euclidean_distance(detection, tracked_object):
     return np.linalg.norm(detection.points - tracked_object.estimate)
 
+
 def get_tracked_ids(detections, tracked_objects):
     tracked_ids_out = np.array([obj.id for obj in tracked_objects])
-    tracked_points = np.array([obj.last_detection.points[0] for obj in tracked_objects])
+    tracked_points = np.array([obj.last_detection.points[0]
+                              for obj in tracked_objects])
     org_points = np.array([obj.points for obj in detections])
-    tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(tracked_points-point[None], axis=1))] for point in org_points]
+    tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(
+        tracked_points-point[None], axis=1))] for point in org_points]
     return tracked_ids
+
 
 def get_tracked_ids3D(detections, tracked_objects):
     tracked_ids_out = np.array([obj.id for obj in tracked_objects])
-    tracked_points = np.array([obj.last_detection.points for obj in tracked_objects])
+    tracked_points = np.array(
+        [obj.last_detection.points for obj in tracked_objects])
     org_points = np.array([obj.points for obj in detections])
-    tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(tracked_points.reshape(-1,4)-point.reshape(1,4), axis=1))] for point in org_points]
+    tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(
+        tracked_points.reshape(-1, 4)-point.reshape(1, 4), axis=1))] for point in org_points]
     return tracked_ids
 
 #-----------------------------------------------------------------------------------------#
-#                               3D-to-2D projection utils                                    
+#                               3D-to-2D projection utils
 #-----------------------------------------------------------------------------------------#
 
-INVALID_TRANS=np.ones(3)*-1
+
+INVALID_TRANS = np.ones(3)*-1
+
+
 def convert_kp2d_from_input_to_orgimg(kp2ds, offsets):
     offsets = offsets.float().to(kp2ds.device)
-    img_pad_size, crop_trbl, pad_trbl = offsets[:,:2], offsets[:,2:6], offsets[:,6:10]
-    leftTop = torch.stack([crop_trbl[:,3]-pad_trbl[:,3], crop_trbl[:,0]-pad_trbl[:,0]],1)
-    kp2ds_on_orgimg = (kp2ds + 1) * img_pad_size.unsqueeze(1) / 2 + leftTop.unsqueeze(1)
+    img_pad_size, crop_trbl, pad_trbl = offsets[:,
+                                                :2], offsets[:, 2:6], offsets[:, 6:10]
+    leftTop = torch.stack(
+        [crop_trbl[:, 3]-pad_trbl[:, 3], crop_trbl[:, 0]-pad_trbl[:, 0]], 1)
+    kp2ds_on_orgimg = (kp2ds + 1) * \
+        img_pad_size.unsqueeze(1) / 2 + leftTop.unsqueeze(1)
     return kp2ds_on_orgimg
 
+
 def convert_cam_to_3d_trans(cams, weight=2.):
-    (s, tx, ty) = cams[:,0], cams[:,1], cams[:,2]
+    (s, tx, ty) = cams[:, 0], cams[:, 1], cams[:, 2]
     depth, dx, dy = 1./s, tx/s, ty/s
     trans3d = torch.stack([dx, dy, depth], 1)*weight
     return trans3d
 
-def batch_orth_proj(X, camera, mode='2d',keep_dim=False):
+
+def batch_orth_proj(X, camera, mode='2d', keep_dim=False):
     camera = camera.view(-1, 1, 3)
-    X_camed = X[:,:,:2] * camera[:, :, 0].unsqueeze(-1)
+    X_camed = X[:, :, :2] * camera[:, :, 0].unsqueeze(-1)
     X_camed += camera[:, :, 1:]
     if keep_dim:
-        X_camed = torch.cat([X_camed, X[:,:,2].unsqueeze(-1)],-1)
+        X_camed = torch.cat([X_camed, X[:, :, 2].unsqueeze(-1)], -1)
     return X_camed
+
 
 def vertices_kp3d_projection(outputs, meta_data=None, presp=False):
     vertices, j3ds = outputs['verts'], outputs['j3d']
-    verts_camed = batch_orth_proj(vertices, outputs['cam'], mode='3d',keep_dim=True)
+    verts_camed = batch_orth_proj(
+        vertices, outputs['cam'], mode='3d', keep_dim=True)
     pj3d = batch_orth_proj(j3ds, outputs['cam'], mode='2d')
-    predicts_j3ds = j3ds[:,:24].contiguous().detach().cpu().numpy()
-    predicts_pj2ds = (pj3d[:,:,:2][:,:24].detach().cpu().numpy()+1)*256
-    cam_trans = estimate_translation(predicts_j3ds, predicts_pj2ds, \
-                                focal_length=443.4, img_size=np.array([512,512])).to(vertices.device)
-    projected_outputs = {'verts_camed': verts_camed, 'pj2d': pj3d[:,:,:2], 'cam_trans':cam_trans}
+    predicts_j3ds = j3ds[:, :24].contiguous().detach().cpu().numpy()
+    predicts_pj2ds = (pj3d[:, :, :2][:, :24].detach().cpu().numpy()+1)*256
+    cam_trans = estimate_translation(predicts_j3ds, predicts_pj2ds,
+                                     focal_length=443.4, img_size=np.array([512, 512])).to(vertices.device)
+    projected_outputs = {'verts_camed': verts_camed,
+                         'pj2d': pj3d[:, :, :2], 'cam_trans': cam_trans}
 
     if meta_data is not None:
-        projected_outputs['pj2d_org'] = convert_kp2d_from_input_to_orgimg(projected_outputs['pj2d'], meta_data['offsets'])
+        projected_outputs['pj2d_org'] = convert_kp2d_from_input_to_orgimg(
+            projected_outputs['pj2d'], meta_data['offsets'])
     return projected_outputs
 
-def estimate_translation_cv2(joints_3d, joints_2d, focal_length=600, img_size=np.array([512.,512.]), proj_mat=None, cam_dist=None):
+
+def estimate_translation_cv2(joints_3d, joints_2d, focal_length=600, img_size=np.array([512., 512.]), proj_mat=None, cam_dist=None):
     if proj_mat is None:
         camK = np.eye(3)
-        camK[0,0], camK[1,1] = focal_length, focal_length
-        camK[:2,2] = img_size//2
+        camK[0, 0], camK[1, 1] = focal_length, focal_length
+        camK[:2, 2] = img_size//2
     else:
         camK = proj_mat
-    ret, rvec, tvec,inliers = cv2.solvePnPRansac(joints_3d, joints_2d, camK, cam_dist,\
-                              flags=cv2.SOLVEPNP_EPNP,reprojectionError=20,iterationsCount=100)
+    ret, rvec, tvec, inliers = cv2.solvePnPRansac(joints_3d, joints_2d, camK, cam_dist,
+                                                  flags=cv2.SOLVEPNP_EPNP, reprojectionError=20, iterationsCount=100)
 
     if inliers is None:
         return INVALID_TRANS
     else:
-        tra_pred = tvec[:,0]            
+        tra_pred = tvec[:, 0]
         return tra_pred
 
-def estimate_translation_np(joints_3d, joints_2d, joints_conf, focal_length=600, img_size=np.array([512.,512.]), proj_mat=None):
+
+def estimate_translation_np(joints_3d, joints_2d, joints_conf, focal_length=600, img_size=np.array([512., 512.]), proj_mat=None):
     """Find camera translation that brings 3D joints joints_3d closest to 2D the corresponding joints_2d.
     Input:
         joints_3d: (25, 3) 3D joint locations
@@ -356,39 +422,41 @@ def estimate_translation_np(joints_3d, joints_2d, joints_conf, focal_length=600,
     num_joints = joints_3d.shape[0]
     if proj_mat is None:
         # focal length
-        f = np.array([focal_length,focal_length])
+        f = np.array([focal_length, focal_length])
         # optical center
         center = img_size/2.
     else:
-        f = np.array([proj_mat[0,0],proj_mat[1,1]])
-        center = proj_mat[:2,2]
+        f = np.array([proj_mat[0, 0], proj_mat[1, 1]])
+        center = proj_mat[:2, 2]
 
     # transformations
-    Z = np.reshape(np.tile(joints_3d[:,2],(2,1)).T,-1)
-    XY = np.reshape(joints_3d[:,0:2],-1)
-    O = np.tile(center,num_joints)
-    F = np.tile(f,num_joints)
-    weight2 = np.reshape(np.tile(np.sqrt(joints_conf),(2,1)).T,-1)
+    Z = np.reshape(np.tile(joints_3d[:, 2], (2, 1)).T, -1)
+    XY = np.reshape(joints_3d[:, 0:2], -1)
+    O = np.tile(center, num_joints)
+    F = np.tile(f, num_joints)
+    weight2 = np.reshape(np.tile(np.sqrt(joints_conf), (2, 1)).T, -1)
 
     # least squares
-    Q = np.array([F*np.tile(np.array([1,0]),num_joints), F*np.tile(np.array([0,1]),num_joints), O-np.reshape(joints_2d,-1)]).T
-    c = (np.reshape(joints_2d,-1)-O)*Z - F*XY
+    Q = np.array([F*np.tile(np.array([1, 0]), num_joints), F *
+                 np.tile(np.array([0, 1]), num_joints), O-np.reshape(joints_2d, -1)]).T
+    c = (np.reshape(joints_2d, -1)-O)*Z - F*XY
 
     # weighted least squares
     W = np.diagflat(weight2)
-    Q = np.dot(W,Q)
-    c = np.dot(W,c)
+    Q = np.dot(W, Q)
+    c = np.dot(W, c)
 
     # square matrix
-    A = np.dot(Q.T,Q)
-    b = np.dot(Q.T,c)
+    A = np.dot(Q.T, Q)
+    b = np.dot(Q.T, c)
 
     # solution
     trans = np.linalg.solve(A, b)
 
     return trans
 
-def estimate_translation(joints_3d, joints_2d, pts_mnum=4,focal_length=600, proj_mats=None, cam_dists=None,img_size=np.array([512.,512.])):
+
+def estimate_translation(joints_3d, joints_2d, pts_mnum=4, focal_length=600, proj_mats=None, cam_dists=None, img_size=np.array([512., 512.])):
     """Find camera translation that brings 3D joints joints_3d closest to 2D the corresponding joints_2d.
     Input:
         joints_3d: (B, K, 3) 3D joint locations
@@ -400,14 +468,14 @@ def estimate_translation(joints_3d, joints_2d, pts_mnum=4,focal_length=600, proj
         joints_3d = joints_3d.detach().cpu().numpy()
     if torch.is_tensor(joints_2d):
         joints_2d = joints_2d.detach().cpu().numpy()
-    
-    if joints_2d.shape[-1]==2:
-        joints_conf = joints_2d[:, :, -1]>-2.
-    elif joints_2d.shape[-1]==3:
-        joints_conf = joints_2d[:, :, -1]>0
-    joints3d_conf = joints_3d[:, :, -1]!=-2.
-    
-    trans = np.zeros((joints_3d.shape[0], 3), dtype=np.float)
+
+    if joints_2d.shape[-1] == 2:
+        joints_conf = joints_2d[:, :, -1] > -2.
+    elif joints_2d.shape[-1] == 3:
+        joints_conf = joints_2d[:, :, -1] > 0
+    joints3d_conf = joints_3d[:, :, -1] != -2.
+
+    trans = np.zeros((joints_3d.shape[0], 3), dtype=float)
     if proj_mats is None:
         proj_mats = [None for _ in range(len(joints_2d))]
     if cam_dists is None:
@@ -415,67 +483,71 @@ def estimate_translation(joints_3d, joints_2d, pts_mnum=4,focal_length=600, proj
     # Find the translation for each example in the batch
     for i in range(joints_3d.shape[0]):
         S_i = joints_3d[i]
-        joints_i = joints_2d[i,:,:2]
+        joints_i = joints_2d[i, :, :2]
         valid_mask = joints_conf[i]*joints3d_conf[i]
-        if valid_mask.sum()<pts_mnum:
+        if valid_mask.sum() < pts_mnum:
             trans[i] = INVALID_TRANS
             continue
-        if len(img_size.shape)==1:
+        if len(img_size.shape) == 1:
             imgsize = img_size
-        elif len(img_size.shape)==2:
+        elif len(img_size.shape) == 2:
             imgsize = img_size[i]
         else:
             raise NotImplementedError
         try:
-            trans[i] = estimate_translation_cv2(S_i[valid_mask], joints_i[valid_mask], 
-                focal_length=focal_length, img_size=imgsize, proj_mat=proj_mats[i], cam_dist=cam_dists[i])
+            trans[i] = estimate_translation_cv2(S_i[valid_mask], joints_i[valid_mask],
+                                                focal_length=focal_length, img_size=imgsize, proj_mat=proj_mats[i], cam_dist=cam_dists[i])
         except:
-            trans[i] = estimate_translation_np(S_i[valid_mask], joints_i[valid_mask], valid_mask[valid_mask].astype(np.float32), 
-                focal_length=focal_length, img_size=imgsize, proj_mat=proj_mats[i])
+            trans[i] = estimate_translation_np(S_i[valid_mask], joints_i[valid_mask], valid_mask[valid_mask].astype(np.float32),
+                                               focal_length=focal_length, img_size=imgsize, proj_mat=proj_mats[i])
 
     return torch.from_numpy(trans).float()
 
 
 #-----------------------------------------------------------------------------------------#
-#                                Body joints definition                                    
+#                                Body joints definition
 #-----------------------------------------------------------------------------------------#
 
 def joint_mapping(source_format, target_format):
-    mapping = np.ones(len(target_format),dtype=np.int)*-1
+    mapping = np.ones(len(target_format), dtype=np.int)*-1
     for joint_name in target_format:
         if joint_name in source_format:
             mapping[target_format[joint_name]] = source_format[joint_name]
     return np.array(mapping)
 
+
 SMPL_24 = {
-    'Pelvis_SMPL':0, 'L_Hip_SMPL':1, 'R_Hip_SMPL':2, 'Spine_SMPL': 3, 'L_Knee':4, 'R_Knee':5, 'Thorax_SMPL': 6, 'L_Ankle':7, 'R_Ankle':8,'Thorax_up_SMPL':9, \
-    'L_Toe_SMPL':10, 'R_Toe_SMPL':11, 'Neck': 12, 'L_Collar':13, 'R_Collar':14, 'Jaw':15, 'L_Shoulder':16, 'R_Shoulder':17,\
-    'L_Elbow':18, 'R_Elbow':19, 'L_Wrist': 20, 'R_Wrist': 21, 'L_Hand':22, 'R_Hand':23
-    }
+    'Pelvis_SMPL': 0, 'L_Hip_SMPL': 1, 'R_Hip_SMPL': 2, 'Spine_SMPL': 3, 'L_Knee': 4, 'R_Knee': 5, 'Thorax_SMPL': 6, 'L_Ankle': 7, 'R_Ankle': 8, 'Thorax_up_SMPL': 9,
+    'L_Toe_SMPL': 10, 'R_Toe_SMPL': 11, 'Neck': 12, 'L_Collar': 13, 'R_Collar': 14, 'Jaw': 15, 'L_Shoulder': 16, 'R_Shoulder': 17,
+    'L_Elbow': 18, 'R_Elbow': 19, 'L_Wrist': 20, 'R_Wrist': 21, 'L_Hand': 22, 'R_Hand': 23
+}
 
 SMPL_EXTRA_30 = {
-    'Nose':24, 'R_Eye':25, 'L_Eye':26, 'R_Ear': 27, 'L_Ear':28, \
-    'L_BigToe':29, 'L_SmallToe': 30, 'L_Heel':31, 'R_BigToe':32,'R_SmallToe':33, 'R_Heel':34, \
-    'L_Hand_thumb':35, 'L_Hand_index': 36, 'L_Hand_middle':37, 'L_Hand_ring':38, 'L_Hand_pinky':39, \
-    'R_Hand_thumb':40, 'R_Hand_index':41,'R_Hand_middle':42, 'R_Hand_ring':43, 'R_Hand_pinky': 44, \
-    'R_Hip': 45, 'L_Hip':46, 'Neck_LSP':47, 'Head_top':48, 'Pelvis':49, 'Thorax_MPII':50, \
-    'Spine_H36M':51, 'Jaw_H36M':52, 'Head':53
-    }
+    'Nose': 24, 'R_Eye': 25, 'L_Eye': 26, 'R_Ear': 27, 'L_Ear': 28,
+    'L_BigToe': 29, 'L_SmallToe': 30, 'L_Heel': 31, 'R_BigToe': 32, 'R_SmallToe': 33, 'R_Heel': 34,
+    'L_Hand_thumb': 35, 'L_Hand_index': 36, 'L_Hand_middle': 37, 'L_Hand_ring': 38, 'L_Hand_pinky': 39,
+    'R_Hand_thumb': 40, 'R_Hand_index': 41, 'R_Hand_middle': 42, 'R_Hand_ring': 43, 'R_Hand_pinky': 44,
+    'R_Hip': 45, 'L_Hip': 46, 'Neck_LSP': 47, 'Head_top': 48, 'Pelvis': 49, 'Thorax_MPII': 50,
+    'Spine_H36M': 51, 'Jaw_H36M': 52, 'Head': 53
+}
 
 SMPL_ALL_54 = {**SMPL_24, **SMPL_EXTRA_30}
 
 #-----------------------------------------------------------------------------------------#
-#               3D vector to 6D rotation representation conversion utils                                    
+#               3D vector to 6D rotation representation conversion utils
 #-----------------------------------------------------------------------------------------#
+
 
 def rot6D_to_angular(rot6D):
     batch_size = rot6D.shape[0]
     pred_rotmat = rot6d_to_rotmat(rot6D).view(batch_size, -1, 3, 3)
-    pose = rotation_matrix_to_angle_axis(pred_rotmat.reshape(-1, 3, 3)).reshape(batch_size, -1)
+    pose = rotation_matrix_to_angle_axis(
+        pred_rotmat.reshape(-1, 3, 3)).reshape(batch_size, -1)
     return pose
 
+
 def rot6d_to_rotmat(x):
-    x = x.view(-1,3,2)
+    x = x.view(-1, 3, 2)
 
     # Normalize the first vector
     b1 = F.normalize(x[:, :, 0], dim=1, eps=1e-6)
@@ -489,6 +561,7 @@ def rot6d_to_rotmat(x):
     rot_mats = torch.stack([b1, b2, b3], dim=-1)
 
     return rot_mats
+
 
 def batch_rodrigues(axisang):
     # This function is borrowed from https://github.com/MandyMo/pytorch_HMR/blob/master/src/util.py#L37
@@ -504,6 +577,7 @@ def batch_rodrigues(axisang):
     rot_mat = rot_mat.view(rot_mat.shape[0], 9)
     return rot_mat
 
+
 def quat2mat(quat):
     """
     This function is borrowed from https://github.com/MandyMo/pytorch_HMR/blob/master/src/util.py#L50
@@ -516,7 +590,8 @@ def quat2mat(quat):
     """
     norm_quat = quat
     norm_quat = norm_quat / norm_quat.norm(p=2, dim=1, keepdim=True)
-    w, x, y, z = norm_quat[:, 0], norm_quat[:, 1], norm_quat[:, 2], norm_quat[:, 3]
+    w, x, y, z = norm_quat[:, 0], norm_quat[:,
+                                            1], norm_quat[:, 2], norm_quat[:, 3]
 
     batch_size = quat.size(0)
 
@@ -529,8 +604,9 @@ def quat2mat(quat):
         w2 - x2 + y2 - z2, 2 * yz - 2 * wx, 2 * xz - 2 * wy, 2 * wx + 2 * yz,
         w2 - x2 - y2 + z2
     ],
-                         dim=1).view(batch_size, 3, 3)
+        dim=1).view(batch_size, 3, 3)
     return rotMat
+
 
 def rotation_matrix_to_angle_axis(rotation_matrix):
     """
@@ -550,6 +626,7 @@ def rotation_matrix_to_angle_axis(rotation_matrix):
     aa = quaternion_to_angle_axis(quaternion)
     aa[torch.isnan(aa)] = 0.0
     return aa
+
 
 def quaternion_to_angle_axis(quaternion: torch.Tensor) -> torch.Tensor:
     """
@@ -602,6 +679,7 @@ def quaternion_to_angle_axis(quaternion: torch.Tensor) -> torch.Tensor:
     angle_axis[..., 1] += q2 * k
     angle_axis[..., 2] += q3 * k
     return angle_axis
+
 
 def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
     """
@@ -682,8 +760,7 @@ def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
     return q
 
 
-
-def transform_rot_representation(rot, input_type='mat',out_type='quat',input_is_degrees=True):
+def transform_rot_representation(rot, input_type='mat', out_type='quat', input_is_degrees=True):
     '''
     make transformation between different representation of 3D rotation
     input_type / out_type (np.array):
@@ -692,33 +769,33 @@ def transform_rot_representation(rot, input_type='mat',out_type='quat',input_is_
         'vec': rotation vector (3)
         'euler': Euler degrees in x,y,z (3)
     '''
-    if input_type=='mat':
+    if input_type == 'mat':
         r = R.from_matrix(rot)
-    elif input_type=='quat':
+    elif input_type == 'quat':
         r = R.from_quat(rot)
-    elif input_type =='vec':
+    elif input_type == 'vec':
         r = R.from_rotvec(rot)
-    elif input_type =='euler':
-        r = R.from_euler('xyz',rot, degrees=input_is_degrees)
-    
-    if out_type=='mat':
+    elif input_type == 'euler':
+        r = R.from_euler('xyz', rot, degrees=input_is_degrees)
+
+    if out_type == 'mat':
         out = r.as_matrix()
-    elif out_type=='quat':
+    elif out_type == 'quat':
         out = r.as_quat()
-    elif out_type =='vec':
+    elif out_type == 'vec':
         out = r.as_rotvec()
-    elif out_type =='euler':
+    elif out_type == 'euler':
         out = r.as_euler('xyz', degrees=False)
     return out
 
 
 #-----------------------------------------------------------------------------------------#
-#                                       utilizes                                  
+#                                       utilizes
 #-----------------------------------------------------------------------------------------#
 
 def time_cost(name='ROMP'):
     def time_counter(func):
-        # This function shows the execution time of 
+        # This function shows the execution time of
         # the function object passed
         def wrap_func(*args, **kwargs):
             t1 = time()
@@ -726,10 +803,12 @@ def time_cost(name='ROMP'):
             t2 = time()
             cost_time = t2-t1
             fps = 1./cost_time
-            print(f'{name} {func.__name__!r} executed in {cost_time:.4f}s, FPS {fps:.1f}')
+            print(
+                f'{name} {func.__name__!r} executed in {cost_time:.4f}s, FPS {fps:.1f}')
             return result
         return wrap_func
     return time_counter
+
 
 def determine_device(gpu_id):
     if gpu_id != -1:
@@ -738,29 +817,34 @@ def determine_device(gpu_id):
         device = torch.device('cpu')
     return device
 
+
 def download_model(remote_url, local_path, name):
     try:
-        os.makedirs(os.path.dirname(local_path),exist_ok=True)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
         try:
             import wget
         except:
             print('Installing wget to download model data.')
             os.system('pip install wget')
             import wget
-        print('Downloading the {} model from {} and put it to {} \n Please download it by youself if this is too slow...'.format(name, remote_url, local_path))
+        print('Downloading the {} model from {} and put it to {} \n Please download it by youself if this is too slow...'.format(
+            name, remote_url, local_path))
         wget.download(remote_url, local_path)
     except Exception as error:
         print(error)
-        print('Failure in downloading the {} model, please download it by youself from {}, and put it to {}'.format(name, remote_url, local_path))
+        print('Failure in downloading the {} model, please download it by youself from {}, and put it to {}'.format(
+            name, remote_url, local_path))
+
 
 def wait_func(mode):
     if mode == 'image':
         print('Press ESC to exit...')
         while 1:
             if cv2.waitKey() == 27:
-                break 
+                break
     elif mode == 'webcam' or mode == 'video':
         cv2.waitKey(1)
+
 
 class ProgressBar(object):
     DEFAULT = 'Progress: %(bar)s %(percent)3d%%'
@@ -775,7 +859,7 @@ class ProgressBar(object):
         self.symbol = symbol
         self.output = output
         self.fmt = re.sub(r'(?P<name>%\(.+?\))d',
-            r'\g<name>%dd' % len(str(total)), fmt)
+                          r'\g<name>%dd' % len(str(total)), fmt)
 
         self.current = 0
 
@@ -798,7 +882,8 @@ class ProgressBar(object):
         self.current = self.total
         self()
         print('', file=self.output)
-    
+
+
 def progress_bar(it):
     progress = ProgressBar(len(it), fmt=ProgressBar.FULL)
     for i, item in enumerate(it):

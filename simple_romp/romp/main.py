@@ -207,9 +207,14 @@ class ROMP(nn.Module):
             #  如果沒有偵測到任何人，就直接回傳
             if len(tracked_objects) == 0:
                 return outputs
+
+            print(tracked_objects)
+
             # 如果有偵測到人，就要把偵測到的人的id找出來
             tracked_ids = get_tracked_ids(detections, tracked_objects)
-            
+
+            print(tracked_ids)
+
             # 做一歐元過濾
             for ind, tid in enumerate(tracked_ids):
                 # 如果這個人還沒有過濾器，就要先初始化一個
