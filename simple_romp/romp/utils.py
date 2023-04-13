@@ -385,11 +385,19 @@ def euclidean_distance(detection, tracked_object):
 
 def get_tracked_ids(detections, tracked_objects):
     tracked_ids_out = np.array([obj.id for obj in tracked_objects])
+    print(f'tracked_ids_out: {tracked_ids_out}')
     tracked_points = np.array([obj.last_detection.points[0]
                               for obj in tracked_objects])
+    print(f'tracked_points: {tracked_points}')
     org_points = np.array([obj.points for obj in detections])
+    print(f'org_points: {org_points}')
+    # 原始 point[None] 跟unsqueeze()類似
+    tracked_ids_original = [tracked_ids_out[np.argmin(np.linalg.norm(
+        tracked_points-point[None], axis=1))] for point in org_points]
+    print(f'tracked_ids_original: {tracked_ids_original}')
     tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(
         tracked_points-point, axis=1))] for point in org_points]
+    print(f'tracked_ids: {tracked_ids}')
     return tracked_ids
 
 
