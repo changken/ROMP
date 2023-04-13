@@ -15,3 +15,7 @@ dist/
 __pycache__/
 demo/images/
 log/*
+
+output/
+*.blend
+*.blend1
