@@ -48,8 +48,8 @@ except:
 
 # Globals
 # Add your UNIX paths here!
-male_model_path = '/home/yusun/ROMP/model_data/SMPL_unity_v.1.0.0/smpl/Models/SMPL_m_unityDoubleBlends_lbs_10_scale5_207_v1.0.0.fbx'
-female_model_path = '/home/yusun/ROMP/model_data/SMPL_unity_v.1.0.0/smpl/Models/SMPL_f_unityDoubleBlends_lbs_10_scale5_207_v1.0.0.fbx'
+male_model_path = '/mnt/d/110598028/ROMP/model_data/SMPL_unity_v.1.0.0/smpl/Models/SMPL_m_unityDoubleBlends_lbs_10_scale5_207_v1.0.0.fbx'
+female_model_path = '/mnt/d/110598028/ROMP/model_data/SMPL_unity_v.1.0.0/smpl/Models/SMPL_f_unityDoubleBlends_lbs_10_scale5_207_v1.0.0.fbx'
 character_model_path = None
 
 '''
