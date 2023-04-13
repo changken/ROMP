@@ -192,6 +192,9 @@ class ROMP(nn.Module):
         else:
             # 如果不是只顯示最大的，就要用tracker來做tracking
             pred_cams = outputs['cam']
+
+            print(f"cam: {pred_cams.cpu().numpy()}")
+
             # 先把所有的detection都做出來
             from norfair import Detection
             detections = [Detection(points=cam[[2, 1]]*512)
@@ -208,12 +211,12 @@ class ROMP(nn.Module):
             if len(tracked_objects) == 0:
                 return outputs
 
-            print(tracked_objects)
+            print(f"tracked_objects: {tracked_objects}")
 
             # 如果有偵測到人，就要把偵測到的人的id找出來
             tracked_ids = get_tracked_ids(detections, tracked_objects)
 
-            print(tracked_ids)
+            print(f"tracked_ids: {tracked_ids}")
 
             # 做一歐元過濾
             for ind, tid in enumerate(tracked_ids):

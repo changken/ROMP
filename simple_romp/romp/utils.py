@@ -275,6 +275,68 @@ class OneEuroFilter:
             print(self.compute_alpha(cutoff))
         return self.x_filter.process(x, self.compute_alpha(cutoff))
 
+# https://www.gushiciku.cn/pl/gAUU/zh-tw
+
+
+class Kalman_Filter:
+    def __init__(self, A, H, Q, R, z, B=None, impulse=None):
+        self._A = A
+        self._H = H
+        self._Q = Q
+        self._R = R
+        self._z = z
+
+        self.m = len(z)
+        self.n = len(z[0])
+        self._identity = np.ones([self.n, self.n])
+
+        if (B is None):
+            self._B = np.zeros([self.n, self.n])
+        else:
+            self._B = B
+        if (impulse is None):
+            self._impulse = np.zeros([self.m, self.n])
+        else:
+            self._impulse = impulse
+
+    def __del__(self):
+        return
+
+    def _kalman(self, xb, Pb, z, impulse):
+        # 測量更新
+        tmp = np.matmul(Pb, self._H.T)
+        K = np.matmul(tmp, np.linalg.inv(
+            np.matmul(self._H, tmp) + self._R))
+        x = xb + np.matmul(K, (z - np.matmul(self._H, xb)))
+        P = np.matmul((self._identity - np.matmul(K, self._H)), Pb)
+        # 時間更新
+        xb = np.matmul(self._A, x) + np.matmul(self._B, impulse)
+        Pb = np.matmul(np.matmul(self._A, P), self._A.T) + self._Q
+        return x, xb, Pb
+
+    def _kalman1d(self, xb, Pb, z, impulse):
+        # 測量更新
+        tmp = Pb*self._H
+        K = tmp/(self._H*tmp + self._R)
+        x = xb + K*(z - self._H*xb)
+        P = (1 - K*self._H)*Pb
+        # 時間更新
+        xb = self._A*x + self._B*impulse
+        Pb = self._A*P*self._A + self._Q
+        return x, xb, Pb
+
+    def get_filtered_data(self, xb, Pb):
+        xx = []
+        for i in range(0, self.m):
+            if (self.n == 1):
+                (x, xb, Pb) = self._kalman1d(
+                    xb, Pb, self._z[i], self._impulse[i])
+            else:
+                (x, xb, Pb) = self._kalman(
+                    xb, Pb, self._z[i], self._impulse[i])
+            xx.append(x)
+        return xx
+
 
 def check_filter_state(OE_filters, signal_ID, show_largest=False, smooth_coeff=3.):
     # 如果one euro filter的数量太多，全部刪除
@@ -468,13 +530,13 @@ def estimate_translation(joints_3d, joints_2d, pts_mnum=4, focal_length=600, pro
         joints_3d = joints_3d.detach().cpu().numpy()
     if torch.is_tensor(joints_2d):
         joints_2d = joints_2d.detach().cpu().numpy()
-    
-    if joints_2d.shape[-1]==2:
-        joints_conf = joints_2d[:, :, -1]>-2.
-    elif joints_2d.shape[-1]==3:
-        joints_conf = joints_2d[:, :, -1]>0
-    joints3d_conf = joints_3d[:, :, -1]!=-2.
-    
+
+    if joints_2d.shape[-1] == 2:
+        joints_conf = joints_2d[:, :, -1] > -2.
+    elif joints_2d.shape[-1] == 3:
+        joints_conf = joints_2d[:, :, -1] > 0
+    joints3d_conf = joints_3d[:, :, -1] != -2.
+
     trans = np.zeros((joints_3d.shape[0], 3), dtype=np.float32)
 
     if proj_mats is None:
