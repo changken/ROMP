@@ -1,1 +1,2 @@
 %windir%\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -NoExit -Command "& 'C:\Users\cg\anaconda3\shell\condabin\conda-hook.ps1' ; conda activate 'C:\Users\cg\anaconda3' "
+%windir%\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -NoExit -Command "& 'D:\anaconda3\shell\condabin\conda-hook.ps1' ; conda activate 'D:\anaconda3\envs\ROMP' "

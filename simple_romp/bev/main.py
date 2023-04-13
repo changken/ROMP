@@ -300,7 +300,10 @@ def main():
             image = cv2.imread(frame_path)
             outputs = bev(image)
             saver(outputs, frame_path, prefix=f'_{model_id}_{args.center_thresh}')
-        save_video_results(saver.frame_save_paths)
+        try:
+            save_video_results(saver.frame_save_paths)
+        except Exception:
+            print("show npy is missing!")
         if args.save_video:
             saver.save_video(video_save_path, frame_rate=args.frame_rate)
 
