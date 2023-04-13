@@ -19,3 +19,4 @@ log/*
 output/
 *.blend
 *.blend1
+romp_server.py
