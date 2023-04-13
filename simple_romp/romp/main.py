@@ -11,7 +11,7 @@ import argparse
 from .post_parser import SMPL_parser, body_mesh_projection2image, parsing_outputs
 from .utils import img_preprocess, create_OneEuroFilter, euclidean_distance, check_filter_state, \
     time_cost, download_model, determine_device, ResultSaver, WebcamVideoStream, convert_cam_to_3d_trans,\
-    wait_func, collect_frame_path, progress_bar, get_tracked_ids, smooth_results, convert_tensor2numpy, save_video_results
+    wait_func, collect_frame_path, progress_bar, get_tracked_ids, get_tracked_ids3D, smooth_results, convert_tensor2numpy, save_video_results
 from vis_human import setup_renderer, rendering_romp_bev_results
 from .post_parser import CenterMap
 

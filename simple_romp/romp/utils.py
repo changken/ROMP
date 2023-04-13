@@ -389,7 +389,7 @@ def get_tracked_ids(detections, tracked_objects):
                               for obj in tracked_objects])
     org_points = np.array([obj.points for obj in detections])
     tracked_ids = [tracked_ids_out[np.argmin(np.linalg.norm(
-        tracked_points-point[None], axis=1))] for point in org_points]
+        tracked_points-point, axis=1))] for point in org_points]
     return tracked_ids
 
 
