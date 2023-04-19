@@ -1,3 +1,4 @@
 ::python -m romp.main --mode=video --calc_smpl --show_items=mesh,j3d --render_mesh -i=D:\110598028\2_people_interview.mp4 -o=../output/2_people_interview_a/2_people_interview_a_result.mp4 --save_video --GPU 0
 ::python -m romp.main --mode=video --calc_smpl -sc 0.05 -t --show_largest --show_items=mesh,j3d --render_mesh -i=D:\110598028\2_people_interview.mp4 -o=../output/2_people_interview_b/2_people_interview_b_result.mp4 --save_video --GPU 0
-python -m romp.main --mode=video --calc_smpl --render_mesh -sc 0.05 --temporal_optimize --show_items=mesh -i=D:\110598028\2_people_interview.mp4 -o=../output/2_people_interview_c/2_people_interview_c_result.mp4 --save_video --GPU 0
+::python -m romp.main --mode=video --calc_smpl --render_mesh -sc 0.05 --temporal_optimize --show_items=mesh -i=D:\110598028\2_people_interview.mp4 -o=../output/2_people_interview_c/2_people_interview_c_result.mp4 --save_video --GPU 0
+python -m romp.main --mode=video --calc_smpl --render_mesh -sc 0.05 --temporal_optimize --show_items=mesh -i=D:\110598028\2_people_interview.mp4 -o=../output/2_people_interview_c_debug/2_people_interview_c_debug_result.mp4 --save_video --GPU 0
