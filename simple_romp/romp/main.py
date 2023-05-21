@@ -15,6 +15,17 @@ from .utils import img_preprocess, create_OneEuroFilter, euclidean_distance, che
 from vis_human import setup_renderer, rendering_romp_bev_results
 from .post_parser import CenterMap
 
+try:
+    # from norfair import Tracker  # 先試試看有沒有安裝norfair
+    from norfair import Tracker, Detection, get_cutout
+    from norfair.filter import OptimizedKalmanFilterFactory
+except:
+    print(
+        'To perform temporal optimization, installing norfair for tracking.')
+    os.system('pip install norfair')  # 安裝norfair
+    from norfair import Tracker, Detection, get_cutout
+    from norfair.filter import OptimizedKalmanFilterFactory
+
 
 def romp_settings(input_args=sys.argv[1:]):
     parser = argparse.ArgumentParser(
@@ -84,6 +95,71 @@ def romp_settings(input_args=sys.argv[1:]):
 
 
 default_settings = romp_settings(input_args=[])
+
+
+def get_color(index: int):
+    colors = [
+        (247, 129, 191),
+        (153, 153, 153),
+        (77, 175, 74),
+        (228, 26, 28),
+        (55, 126, 184),
+        (255, 255, 255),
+        (152, 78, 163),
+        (86, 180, 233),
+        (204, 121, 167),
+        (240, 228, 66),
+    ]
+    return colors[index % len(colors)]
+
+
+def get_hist(image):
+    hist = cv2.calcHist(
+        [cv2.cvtColor(image, cv2.COLOR_BGR2Lab)],
+        [0, 1],
+        None,
+        [128, 128],
+        [0, 256, 0, 256],
+    )
+    return cv2.normalize(hist, hist).flatten()
+
+
+def collision_detected(det_first: Detection, det_snd: Detection):
+
+    fst_xmin, fst_ymin = det_first.points[0]
+    fst_xmax, fst_ymax = det_first.points[-1]
+    snd_xmin, snd_ymin = det_snd.points[0]
+    snd_xmax, snd_ymax = det_snd.points[-1]
+
+    return (
+        fst_xmin < snd_xmax
+        and fst_xmax > snd_xmin
+        and fst_ymin < snd_ymax
+        and fst_ymax > snd_ymin
+    )
+
+
+def embedding_distance(matched_not_init_trackers, unmatched_trackers):
+    snd_embedding = unmatched_trackers.last_detection.embedding
+
+    if snd_embedding is None:
+        for detection in reversed(unmatched_trackers.past_detections):
+            if detection.embedding is not None:
+                snd_embedding = detection.embedding
+                break
+        else:
+            return 1
+
+    for detection_fst in matched_not_init_trackers.past_detections:
+        if detection_fst.embedding is None:
+            continue
+
+        distance = 1 - cv2.compareHist(
+            snd_embedding, detection_fst.embedding, cv2.HISTCMP_CORREL
+        )
+        if distance < 0.5:
+            return distance
+    return 1
 
 
 class ROMP(nn.Module):
@@ -170,11 +246,24 @@ class ROMP(nn.Module):
                 from norfair import Tracker
             # 初始化tracker
             self.tracker = Tracker(
+                initialization_delay=1,
+                distance_function="euclidean",
+                hit_counter_max=10,
+                filter_factory=OptimizedKalmanFilterFactory(),
+                distance_threshold=50,
+                past_detections_length=5,
+                reid_distance_function=embedding_distance,
+                reid_distance_threshold=0.5,
+                reid_hit_counter_max=500,
+            )
+            '''
+            self.tracker = Tracker(
                 distance_function=euclidean_distance, distance_threshold=200)  # 120
+            '''
             self.tracker_initialized = False
 
     # 做temporal optimization
-    def temporal_optimization(self, outputs, signal_ID):
+    def temporal_optimization(self, outputs, signal_ID, image):
         # 如果是第一次偵測到這個人，就要初始化一個過濾器
         check_filter_state(self.OE_filters, signal_ID,
                            self.settings.show_largest, self.settings.smooth_coeff)
@@ -205,8 +294,24 @@ class ROMP(nn.Module):
                 for _ in range(8):
                     tracked_objects = self.tracker.update(
                         detections=detections)
+
+            skip_period = 10
+            if signal_ID % skip_period == 0:
+                frame = image.copy()
+                for detection in detections:
+                    cut = get_cutout(detection.points, frame)
+                    if cut.shape[0] > 0 and cut.shape[1] > 0:
+                        detection.embedding = get_hist(cut)
+                    else:
+                        detection.embedding = None
+
+                tracked_objects = self.tracker.update(
+                    detections=detections, period=skip_period)
+            else:
+                tracked_objects = self.tracker.update(detections=detections)
+
             # 初始化完畢
-            tracked_objects = self.tracker.update(detections=detections)
+            # tracked_objects = self.tracker.update(detections=detections)
             #  如果沒有偵測到任何人，就直接回傳
             if len(tracked_objects) == 0:
                 return outputs
@@ -243,7 +348,7 @@ class ROMP(nn.Module):
             return None
         if self.settings.temporal_optimize:  # 如果有開啟濾波器
             # 將結果傳入temporal optimization來處理濾波
-            outputs = self.temporal_optimization(outputs, signal_ID)
+            outputs = self.temporal_optimization(outputs, signal_ID, image)
         # 算位移向量
         outputs['cam_trans'] = convert_cam_to_3d_trans(outputs['cam'])
         if self.settings.calc_smpl:  # 如果有calc smpl
