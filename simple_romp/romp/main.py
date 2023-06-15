@@ -17,13 +17,13 @@ from .post_parser import CenterMap
 
 try:
     # from norfair import Tracker  # 先試試看有沒有安裝norfair
-    from norfair import Tracker, Detection, get_cutout
+    from norfair import Tracker, Detection, get_cutout, draw_tracked_objects
     from norfair.filter import OptimizedKalmanFilterFactory
 except:
     print(
         'To perform temporal optimization, installing norfair for tracking.')
     os.system('pip install norfair')  # 安裝norfair
-    from norfair import Tracker, Detection, get_cutout
+    from norfair import Tracker, Detection, get_cutout, draw_tracked_objects
     from norfair.filter import OptimizedKalmanFilterFactory
 
 
@@ -247,7 +247,7 @@ class ROMP(nn.Module):
             # 初始化tracker
             self.tracker = Tracker(
                 initialization_delay=1,
-                distance_function="euclidean",
+                distance_function=euclidean_distance,
                 hit_counter_max=10,
                 filter_factory=OptimizedKalmanFilterFactory(),
                 distance_threshold=50,
@@ -317,6 +317,8 @@ class ROMP(nn.Module):
                 return outputs
 
             print(f"tracked_objects: {tracked_objects}")
+
+            draw_tracked_objects(image, tracked_objects)
 
             # 如果有偵測到人，就要把偵測到的人的id找出來
             tracked_ids = get_tracked_ids(detections, tracked_objects)
