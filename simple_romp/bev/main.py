@@ -46,7 +46,7 @@ def bev_settings(input_args=sys.argv[1:]):
     parser.add_argument('--show_items', type=str, default='mesh,mesh_bird_view', help = 'The items to visualized, including mesh,pj2d,j3d,mesh_bird_view,mesh_side_view,center_conf,rotate_mesh. splited with ,')
     parser.add_argument('--save_video', action='store_true', help = 'Whether to save the video results')
     parser.add_argument('--frame_rate', type=int, default=24, help = 'The frame_rate of saved video results')
-    parser.add_argument('--smpl_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','smpla_packed_info.pth'), help = 'The path of SMPL-A model file')
+    parser.add_argument('--smpl_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','SMPLA_NEUTRAL.pth'), help = 'The path of SMPL-A model file')
     parser.add_argument('--smil_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','smil_packed_info.pth'), help = 'The path of SMIL model file')
     parser.add_argument('--model_path', type=str, default=osp.join(osp.expanduser("~"),'.romp',model_dict[model_id]), help = 'The path of BEV checkpoint')
 
@@ -68,11 +68,13 @@ def bev_settings(input_args=sys.argv[1:]):
     if args.render_mesh or args.show_largest:
         args.calc_smpl = True
     if not os.path.exists(args.smpl_path):
-        smpl_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/smpla_packed_info.pth'
-        download_model(smpl_url, args.smpl_path, 'SMPL-A')
+        print('please prepare SMPL model files following instructions at https://github.com/Arthur151/ROMP/blob/master/simple_romp/README.md#installation')
+        #smpl_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/smpla_packed_info.pth'
+        #download_model(smpl_url, args.smpl_path, 'SMPL-A')
     if not os.path.exists(args.smil_path):
-        smil_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/smil_packed_info.pth'
-        download_model(smil_url, args.smil_path, 'SMIL')
+        print('please prepare SMIL model files following instructions at https://github.com/Arthur151/ROMP/blob/master/simple_romp/README.md#installation')
+        #smil_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/smil_packed_info.pth'
+        #download_model(smil_url, args.smil_path, 'SMIL')
     if not os.path.exists(args.model_path):
         romp_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/'+model_dict[model_id]
         download_model(romp_url, args.model_path, 'BEV')

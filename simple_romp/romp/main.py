@@ -26,53 +26,26 @@ except:
     from norfair import Tracker, Detection, get_cutout, draw_tracked_objects
     from norfair.filter import OptimizedKalmanFilterFactory
 
-
 def romp_settings(input_args=sys.argv[1:]):
     parser = argparse.ArgumentParser(
         description='ROMP: Monocular, One-stage, Regression of Multiple 3D People')
-    parser.add_argument('-m', '--mode', type=str, default='image',
-                        help='Inferece mode, including image, video, webcam')
-    parser.add_argument('-i', '--input', type=str, default=None,
-                        help='Path to the input image / video')
-    parser.add_argument('-o', '--save_path', type=str, default=osp.join(
-        osp.expanduser("~"), 'ROMP_results'), help='Path to save the results')
-    parser.add_argument('--GPU', type=int, default=0,
-                        help='The gpu device number to run the inference on. If GPU=-1, then running in cpu mode')
-    parser.add_argument('--onnx', action='store_true',
-                        help='Whether to use ONNX for acceleration.')
-
-    parser.add_argument('-t', '--temporal_optimize', action='store_true',
-                        help='Whether to use OneEuro filter to smooth the results')
-    parser.add_argument('--center_thresh', type=float, default=0.25,
-                        help='The confidence threshold of positive detection in 2D human body center heatmap.')
-    parser.add_argument('--show_largest', action='store_true',
-                        help='Whether to show the largest person only')
-    parser.add_argument('-sc', '--smooth_coeff', type=float, default=3.,
-                        help='The smoothness coeff of OneEuro filter, the smaller, the smoother.')
-    parser.add_argument('--calc_smpl', action='store_false',
-                        help='Whether to calculate the smpl mesh from estimated SMPL parameters')
-    parser.add_argument('--render_mesh', action='store_true',
-                        help='Whether to render the estimated 3D mesh mesh to image')
-    parser.add_argument('--renderer', type=str, default='sim3dr',
-                        help='Choose the renderer for visualizaiton: pyrender (great but slow), sim3dr (fine but fast)')
-    parser.add_argument('--show', action='store_true',
-                        help='Whether to show the rendered results')
-    parser.add_argument('--show_items', type=str, default='mesh',
-                        help='The items to visualized, including mesh,pj2d,j3d,mesh_bird_view,mesh_side_view,center_conf. splited with ,')
-    parser.add_argument('--save_video', action='store_true',
-                        help='Whether to save the video results')
-    parser.add_argument('--frame_rate', type=int, default=24,
-                        help='The frame_rate of saved video results')
-    parser.add_argument('--smpl_path', type=str, default=osp.join(osp.expanduser(
-        "~"), '.romp', 'smpl_packed_info.pth'), help='The path of smpl model file')
-    parser.add_argument('--model_path', type=str, default=osp.join(
-        osp.expanduser("~"), '.romp', 'ROMP.pkl'), help='The path of ROMP checkpoint')
-    parser.add_argument('--model_onnx_path', type=str, default=osp.join(
-        osp.expanduser("~"), '.romp', 'ROMP.onnx'), help='The path of ROMP onnx checkpoint')
-    parser.add_argument('--root_align', type=bool, default=False,
-                        help='Please set this config as True to use the ROMP checkpoints trained by yourself.')
-    parser.add_argument('--webcam_id', type=int,
-                        default=0, help='The Webcam ID.')
+    
+    parser.add_argument('-t', '--temporal_optimize', action='store_true', help = 'Whether to use OneEuro filter to smooth the results')
+    parser.add_argument('--center_thresh', type=float, default=0.25, help = 'The confidence threshold of positive detection in 2D human body center heatmap.')
+    parser.add_argument('--show_largest', action='store_true', help = 'Whether to show the largest person only')
+    parser.add_argument('-sc','--smooth_coeff', type=float, default=3., help = 'The smoothness coeff of OneEuro filter, the smaller, the smoother.')
+    parser.add_argument('--calc_smpl', action='store_false', help = 'Whether to calculate the smpl mesh from estimated SMPL parameters')
+    parser.add_argument('--render_mesh', action='store_true', help = 'Whether to render the estimated 3D mesh mesh to image')
+    parser.add_argument('--renderer', type=str, default='sim3dr', help = 'Choose the renderer for visualizaiton: pyrender (great but slow), sim3dr (fine but fast)')
+    parser.add_argument('--show', action='store_true', help = 'Whether to show the rendered results')
+    parser.add_argument('--show_items', type=str, default='mesh', help = 'The items to visualized, including mesh,pj2d,j3d,mesh_bird_view,mesh_side_view,center_conf. splited with ,')
+    parser.add_argument('--save_video', action='store_true', help = 'Whether to save the video results')
+    parser.add_argument('--frame_rate', type=int, default=24, help = 'The frame_rate of saved video results')
+    parser.add_argument('--smpl_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','SMPL_NEUTRAL.pth'), help = 'The path of smpl model file')
+    parser.add_argument('--model_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','ROMP.pkl'), help = 'The path of ROMP checkpoint')
+    parser.add_argument('--model_onnx_path', type=str, default=osp.join(osp.expanduser("~"),'.romp','ROMP.onnx'), help = 'The path of ROMP onnx checkpoint')
+    parser.add_argument('--root_align',type=bool, default=False, help = 'Please set this config as True to use the ROMP checkpoints trained by yourself.')
+    parser.add_argument('--webcam_id',type=int, default=0, help = 'The Webcam ID.')
     args = parser.parse_args(input_args)
 
     if not torch.cuda.is_available():
@@ -83,8 +56,9 @@ def romp_settings(input_args=sys.argv[1:]):
     if args.render_mesh or args.show_largest:
         args.calc_smpl = True
     if not os.path.exists(args.smpl_path):
-        smpl_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/smpl_packed_info.pth'
-        download_model(smpl_url, args.smpl_path, 'SMPL')
+        if os.path.exists(args.smpl_path.replace('SMPL_NEUTRAL.pth', 'smpl_packed_info.pth')):
+            args.smpl_path = args.smpl_path.replace('SMPL_NEUTRAL.pth', 'smpl_packed_info.pth')
+        print('please prepare SMPL model files following instructions at https://github.com/Arthur151/ROMP/blob/master/simple_romp/README.md#installation')
     if not os.path.exists(args.model_path):
         romp_url = 'https://github.com/Arthur151/ROMP/releases/download/V2.0/ROMP.pkl'
         download_model(romp_url, args.model_path, 'ROMP')

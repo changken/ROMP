@@ -538,13 +538,13 @@ def estimate_translation(joints_3d, joints_2d, pts_mnum=4, focal_length=600, pro
         joints_3d = joints_3d.detach().cpu().numpy()
     if torch.is_tensor(joints_2d):
         joints_2d = joints_2d.detach().cpu().numpy()
-
-    if joints_2d.shape[-1] == 2:
-        joints_conf = joints_2d[:, :, -1] > -2.
-    elif joints_2d.shape[-1] == 3:
-        joints_conf = joints_2d[:, :, -1] > 0
-    joints3d_conf = joints_3d[:, :, -1] != -2.
-
+    
+    if joints_2d.shape[-1]==2:
+        joints_conf = joints_2d[:, :, -1]>-2.
+    elif joints_2d.shape[-1]==3:
+        joints_conf = joints_2d[:, :, -1]>0
+    joints3d_conf = joints_3d[:, :, -1]!=-2.
+    
     trans = np.zeros((joints_3d.shape[0], 3), dtype=np.float32)
 
     if proj_mats is None:

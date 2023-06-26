@@ -1,19 +1,25 @@
 # Simple_ROMP
 
-Simplified implementation of ROMP [ICCV21] and BEV [CVPR22]
+Simplified implementation of ROMP [ICCV21], BEV [CVPR22], and TRACE [CVPR23].
 
-As shown in [the main page](https://github.com/Arthur151/ROMP), the differences between ROMP and BEV are:  
-ROMP has a lighter head to efficiently estimate the SMPL 3D pose/shape parameters and roughly 2D position/scale of people in the image.  
-BEV explicitly reasons about relative depths of people and support all age groups with SMPL+A model. 
+As shown in [the main page](https://github.com/Arthur151/ROMP), the differences between ROMP, BEV, and TRACE are:  
+ROMP has a lighter head to efficiently estimate the SMPL 3D pose/shape parameters and rough 2D position/scale of people in the image.  
+BEV explicitly reasons about relative depths of people and support all age groups with SMPL+A model.  
+TRACE tracks specific subjects shown in the first frame and recover their 3D trajectories in global coordinates.  
+
+Please note that these instructions are just for ROMP and BEV.   
+If you want to use TRACE as well, please refer to [this instrcution](trace2/README.md). 
 
 ## Installation
+
+1. Installing simple_romp via pip:
 
 ```
 pip install --upgrade setuptools numpy cython lap
 ```
 
 ```
-pip install --upgrade simple_romp
+pip install simple_romp==1.1.3
 ```
 or download the package and install it from source:
 ```
@@ -23,6 +29,42 @@ python setup.py install
 For Mac users, we strongly recommand to upgrade your pytorch to the latest version to support more basic operations used in BEV. To achieve this, please run
 ```
 pip install --upgrade torch torchvision
+```
+
+[中国人专属-百度网盘模型下载](https://pan.baidu.com/s/1OuEpHr8assuX4UHJYeppRw?pwd=jm9i)（如果在国内访问Github不便请从这里下载除SMPL和SMIL外所有模型文件，并放到~/.romp/里）
+
+2. Preparing SMPL model files in our format:
+
+Firstly, please register and download:  
+a. Meta data from [this link](https://github.com/Arthur151/ROMP/releases/download/V2.0/smpl_model_data.zip). Please unzip it, then we get a folder named "smpl_model_data"
+b. SMPL model file (SMPL_NEUTRAL.pkl) from "Download version 1.1.0 for Python 2.7 (female/male/neutral, 300 shape PCs)" in [official website](https://smpl.is.tue.mpg.de/). Please unzip it and move the SMPL_NEUTRAL.pkl from extracted folder into the "smpl_model_data" folder.      
+c. (Optional) If you use BEV, please also download SMIL model file (DOWNLOAD SMIL) from [official website](https://www.iosb.fraunhofer.de/en/competences/image-exploitation/object-recognition/sensor-networks/motion-analysis.html). Please unzip and put it into the "smpl_model_data" folder, so we have "smpl_model_data/smil/smil_web.pkl".   
+Then we can get a folder in structure like this:  
+```
+|-- smpl_model_data
+|   |-- SMPL_NEUTRAL.pkl
+|   |-- J_regressor_extra.npy
+|   |-- J_regressor_h36m.npy
+|   |-- smpl_kid_template.npy
+|   |-- smil
+|   |-- |-- smil_web.pkl
+```
+
+Secondly, please convert the SMPL model files to our format via  
+```
+# please provide the absolute path of the "smpl_model_data" folder to the source_dir 
+romp.prepare_smpl -source_dir=/path/to/smpl_model_data
+# (Optional) If you use BEV, please also run:
+bev.prepare_smil -source_dir=/path/to/smpl_model_data
+```
+The converted file would be save to "~/.romp/" in defualt. 
+
+Please don't worry if there are bugs reporting during "Preparing SMPL model files". It is fine as long as we get things like this in "~/.romp/".
+```
+|-- .romp
+|   |-- SMPL_NEUTRAL.pth
+|   |-- SMPLA_NEUTRAL.pth
+|   |-- smil_packed_info.pth
 ```
 
 ## Usage
@@ -60,7 +102,6 @@ bev -m video -i /path/to/image/folder/ -o /path/to/output/folder/
   <img src="../../assets/demo/animation/c4_results_compressed.gif" width="32%" />
   <img src="../../assets/demo/animation/c0_results_compressed.gif" width="32%" />
 </p>
-
 
 Processing a video:
 ```
