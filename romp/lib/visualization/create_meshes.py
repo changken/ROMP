@@ -57,7 +57,7 @@ def create_smpl_mesh():
     #         new_mesh = self.create_smpl_mesh(self.verts_mean)
     #         self.meshes.append(new_mesh)
     #     self.set_meshes_zero(list(range(self.current_mesh_num)))
-    
+    args().smpl_model_path = "C:/Users/cg/.romp"
     smpl_param_dict = pickle.load(open(os.path.join(args().smpl_model_path,'SMPL_NEUTRAL.pkl'),'rb'), encoding='latin1')
     faces = smpl_param_dict['f']
     vertices = smpl_param_dict['v_template']

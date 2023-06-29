@@ -27,9 +27,13 @@ except:
     from norfair.filter import OptimizedKalmanFilterFactory
 
 def romp_settings(input_args=sys.argv[1:]):
-    parser = argparse.ArgumentParser(
-        description='ROMP: Monocular, One-stage, Regression of Multiple 3D People')
-    
+    parser = argparse.ArgumentParser(description = 'ROMP: Monocular, One-stage, Regression of Multiple 3D People')
+    parser.add_argument('-m', '--mode', type=str, default='image', help = 'Inferece mode, including image, video, webcam')
+    parser.add_argument('-i', '--input', type=str, default=None, help = 'Path to the input image / video')
+    parser.add_argument('-o', '--save_path', type=str, default=osp.join(osp.expanduser("~"),'ROMP_results'), help = 'Path to save the results')
+    parser.add_argument('--GPU', type=int, default=0, help = 'The gpu device number to run the inference on. If GPU=-1, then running in cpu mode')
+    parser.add_argument('--onnx', action='store_true', help = 'Whether to use ONNX for acceleration.')
+
     parser.add_argument('-t', '--temporal_optimize', action='store_true', help = 'Whether to use OneEuro filter to smooth the results')
     parser.add_argument('--center_thresh', type=float, default=0.25, help = 'The confidence threshold of positive detection in 2D human body center heatmap.')
     parser.add_argument('--show_largest', action='store_true', help = 'Whether to show the largest person only')

@@ -3,11 +3,13 @@ ARGS:
  tab: 'process_video'
  gpu: 0 
 
- backbone: 'hrnet'
+#  backbone: 'hrnet'
+ backbone: 'resnet'
  model_precision: 'fp32'
  val_batch_size: 8
  nw: 4
- model_path: trained_models/ROMP_HRNet32_V1.pkl #  '../trained_models/ROMP_ResNet50_V1.pkl'
+#  model_path: trained_models/ROMP_HRNet32_V1.pkl #  '../trained_models/ROMP_ResNet50_V1.pkl'
+ model_path: trained_models/ROMP_ResNet50_V1.pkl #  '../trained_models/ROMP_ResNet50_V1.pkl'
  smpl_mesh_root_align: False
  centermap_conf_thresh: 0.25
 

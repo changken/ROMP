@@ -1,0 +1,1 @@
+python -m romp.test --configs_yml=D:\\110598028\\ROMP\\configs\\webcam.yml
