@@ -223,12 +223,13 @@ class ROMP(nn.Module):
                 os.system('pip install norfair')  # 安裝norfair
                 from norfair import Tracker
             # 初始化tracker
+            '''
             self.tracker = Tracker(
                 initialization_delay=1,
                 distance_function=euclidean_distance,
                 hit_counter_max=10,
                 filter_factory=OptimizedKalmanFilterFactory(),
-                distance_threshold=50,
+                distance_threshold=200,
                 past_detections_length=5,
                 reid_distance_function=embedding_distance,
                 reid_distance_threshold=0.5,
@@ -237,8 +238,8 @@ class ROMP(nn.Module):
             '''
             self.tracker = Tracker(
                 distance_function=euclidean_distance, distance_threshold=200)  # 120
-            '''
             self.tracker_initialized = False
+            
 
     # 做temporal optimization
     def temporal_optimization(self, outputs, signal_ID, image):
@@ -259,20 +260,21 @@ class ROMP(nn.Module):
         else:
             # 如果不是只顯示最大的，就要用tracker來做tracking
             pred_cams = outputs['cam']
+            # pred_pj2d_org = outputs['pj2d_org']
 
             print(f"cam: {pred_cams.cpu().numpy()}")
 
             # 先把所有的detection都做出來
             from norfair import Detection
-            detections = [Detection(points=cam[[2, 1]]*512)
-                          for cam in pred_cams.cpu().numpy()]
+            detections = [Detection(points=cam[[2, 1]]*512) for cam in pred_cams.cpu().numpy()]
+            # detections = [Detection(points=pj2d_org) for pj2d_org in pred_pj2d_org.cpu().numpy()]
             # 如果還沒初始化tracker，就先初始化
             if not self.tracker_initialized:
                 # 初始化tracker
                 for _ in range(8):
                     tracked_objects = self.tracker.update(
                         detections=detections)
-
+            '''
             skip_period = 10
             if signal_ID % skip_period == 0:
                 frame = image.copy()
@@ -287,16 +289,17 @@ class ROMP(nn.Module):
                     detections=detections, period=skip_period)
             else:
                 tracked_objects = self.tracker.update(detections=detections)
+            '''
 
             # 初始化完畢
-            # tracked_objects = self.tracker.update(detections=detections)
+            tracked_objects = self.tracker.update(detections=detections)
             #  如果沒有偵測到任何人，就直接回傳
             if len(tracked_objects) == 0:
                 return outputs
 
             print(f"tracked_objects: {tracked_objects}")
 
-            draw_tracked_objects(image, tracked_objects)
+            #draw_tracked_objects(image, tracked_objects)
 
             # 如果有偵測到人，就要把偵測到的人的id找出來
             tracked_ids = get_tracked_ids(detections, tracked_objects)
