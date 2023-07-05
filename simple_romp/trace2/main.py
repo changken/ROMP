@@ -42,6 +42,7 @@ class TRACE(nn.Module):
         self.motion_backbone = FlowExtract(self.raft_model_path, self.device)
         
         self._result_parser = TempResultParser(self.smpl_path, self.center_thresh)
+        self.smpl_model_path = self.smpl_path
         temporal_head_model = TRACE_head(self._result_parser, temp_clip_length=self.temp_clip_length, smpl_model_path=self.smpl_path)
         temporal_head_model = load_model(self.trace_head_model_path, temporal_head_model, prefix='', drop_prefix='', fix_loaded=False) #module.
         self.temporal_head_model = nn.DataParallel(temporal_head_model.to(self.device))

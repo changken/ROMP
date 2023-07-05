@@ -63,4 +63,4 @@ def visualize_subject_world_results(seq_name, annots, seq_frame_dir, smpl_model_
 if __name__ == '__main__':
     args = show_settings()
     results = np.load(args.preds_path, allow_pickle=True)['outputs'][()]
-    visualize_subject_world_results('prediction', results, args.frame_dir, args.smpl_model_folder, img_ext=args.img_ext)
+    visualize_subject_world_results('prediction', results, args.frame_dir, args.smpl_model_folder, img_ext='jpg')
